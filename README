@@ -1,0 +1,80 @@
+QuartzRails
+===========
+
+Rails plugin to integrate with the Quartz scheduling library.
+
+This plugin consists of a ServletContextListener which initializes the Quartz
+scheduler, and a QuartzJob able to run arbitrary Ruby code in the JRuby/Rails
+environment. 
+
+The SVN repository of this plugin is located at
+https://projects.jkraemer.net/svn/plugins/jruby/quartz_rails
+
+Usage
+=====
+
+Get Quartz
+----------
+
+The Quartz java library (http://www.opensymphony.com/quartz/) is part of the
+JBoss distribution, so in case this is your platform of choice, you're ready to
+go, no need to install it a second time.
+
+Otherwise, go download Quartz from
+(http://www.opensymphony.com/quartz/download.action) and place the jar
+somewhere so it ends up in WEB-INF/lib inside your war file. With Warbler, your
+application's lib/ dir is a good choice as it will be picked up from there
+automatically.
+
+The plugin is in production use with Quartz version 1.5.2, as delivered with
+JBoss 4.2.1, but more recent versions should work, too.
+
+
+Install the ContextListener
+------------------------------
+add the following to your web.xml:
+  
+  <listener>
+    <listener-class>org.jruby.webapp.quartz.QuartzContextListener</listener-class>
+  </listener>
+
+Configure your Jobs
+-------------------
+
+First, give your job a name. We'll use 'yourJob' here as an example.  Then, add
+two context parameters to your web.xml (i.e. by modifying
+RAILS_ROOT/config/web.xml.erb if you're using warbler to package your
+application):
+  
+  <context-param>
+    <param-name>yourJobCommand</param-name>
+    <param-value>YourJobClass.do_stuff</param-value>
+  </context-param>
+  <context-param>
+    <param-name>yourJobCronPattern</param-name>
+    <param-value>0 * * * * ?</param-value>
+  </context-param>
+
+The first parameter tells Quartz to run the do_stuff method of class
+YourJobClass, and the second tells it to do so every minute. For documentation
+and more examples of the cron pattern syntax please view the quartz project
+documentation, i.e. this page:
+http://www.opensymphony.com/quartz/wikidocs/TutorialLesson6.html
+
+You can have as many jobs declared like this as you like.
+
+
+Building from source
+--------------------
+
+To build the java source code, copy servlet-api.jar (not included here because
+I'm not sure of the licensing terms, but it is delivered with your app server)
+to dependencies/ and run jrake.
+
+
+Author, Credits
+---------------
+
+Created by: Jens Krämer, http://www.jkraemer.net/
+
+
