@@ -9,7 +9,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.jruby.Ruby;
-import org.jruby.webapp.RailsContextListener;
+import org.jruby.rack.RackServletContextListener;
+import org.jruby.rack.RackApplicationFactory;
+import org.jruby.rack.RackApplication;
 
 import org.quartz.Job;
 import org.quartz.JobDataMap;
@@ -26,51 +28,44 @@ import org.apache.commons.pool.ObjectPool;
  */
 public class RailsJob implements Job {
 
-  private static final int FIFTEEN_MINUTES_IN_MILLIS = 1000 * 60 * 15;
-
   /**
    * inspired by Goldspike's RailsServlet#service
    */
   public void execute(JobExecutionContext context)
-			throws JobExecutionException 
+            throws JobExecutionException 
   {
     try {
       ServletContext ctx = getServletContext(context);
       JobDataMap data = context.getJobDetail().getJobDataMap();
       String command = data.getString("command");
-	  ctx.log("starting: " + command);
-	  
-      Ruby runtime = null;
+      ctx.log("starting: " + command);
+      
+      RackApplicationFactory rackFactory = (RackApplicationFactory) ctx.getAttribute(RackServletContextListener.FACTORY_KEY);
+      RackApplication rackApp = null;
       try {
-          runtime = (Ruby) getRuntimePool(ctx).borrowObject();
-          runtime.evalScriptlet(command);
-          getRuntimePool(ctx).returnObject(runtime);
-		  ctx.log("finished: " + command);
+          rackApp = rackFactory.getApplication();
+          rackApp.getRuntime().evalScriptlet(command);
+          ctx.log("finished: " + command);
       } catch (Exception e) {
           ctx.log("Could not execute: " + command, e);
-          if(runtime != null) getRuntimePool(ctx).invalidateObject(runtime);
-          ctx.log(command + " returning JRuby runtime to pool and will restart in 15 minutes.");
-          try {
-              Thread.sleep(FIFTEEN_MINUTES_IN_MILLIS);
-          } catch (InterruptedException ex) {
-              // can't do much here ...
-          }
+      } finally {
+          if(rackApp != null) rackFactory.finishedWithApplication(rackApp);
       }
     } catch (Exception e) {
       throw new JobExecutionException(e);
     }
-	}
+  }
 
-	protected ObjectPool getRuntimePool(ServletContext ctx)
+  protected RackApplicationFactory getApplicationFactory(ServletContext ctx)
     throws ServletException 
   {
-		ObjectPool runtimePool = 
-      (ObjectPool)ctx.getAttribute(RailsContextListener.RUNTIME_POOL_ATTRIBUTE);
-		if (runtimePool == null) {
-			throw new ServletException("No runtime pool is available, please check RailsContextListener");
-		}
-		return runtimePool;
-	}
+    RackApplicationFactory runtimePool = 
+      (RackApplicationFactory)ctx.getAttribute(RackServletContextListener.FACTORY_KEY);
+    if (runtimePool == null) {
+      throw new ServletException("No application factory is available, please check RackServletContextListener");
+    }
+    return runtimePool;
+  }
 
   protected ServletContext getServletContext(JobExecutionContext ctx) 
     throws org.quartz.SchedulerException 

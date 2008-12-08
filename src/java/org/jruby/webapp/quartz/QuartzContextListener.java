@@ -38,8 +38,8 @@ public class QuartzContextListener implements ServletContextListener {
   /**
    * Initializes the scheduler, and schedules all configured jobs.
    */
-	public void contextInitialized(ServletContextEvent event) {
-		context = event.getServletContext();
+  public void contextInitialized(ServletContextEvent event) {
+    context = event.getServletContext();
     context.log("intializing Quartz Scheduler...");
     try {
       scheduler = StdSchedulerFactory.getDefaultScheduler();
@@ -60,7 +60,7 @@ public class QuartzContextListener implements ServletContextListener {
   /**
    * shuts down the scheduler
    */
-	public void contextDestroyed(ServletContextEvent event) {
+    public void contextDestroyed(ServletContextEvent event) {
     try {
       if (scheduler != null) scheduler.shutdown();
     } catch (Exception e) {
